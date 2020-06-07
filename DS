@@ -1,0 +1,75 @@
+"""
+***DS network structure with two fully connected layers for defect classification.***
+
+Since the paper is being submitted, the database set will be published after the paper is accepted.
+Database set information:The defects are classified as three types and specimens with no defect are also included.
+In the established database set, the defect depth ranges from 10% to 50%, with 10% intervals.
+In addition, the radius of the pinhole defect ranges from 0.5 mm to 3 mm,
+and the sizes of the crack defect range from 1×5 mm2 to 2×10 mm2,
+and the sizes of the corrosion defect range from 5×5 mm2 to 10×10 mm2.
+Each defect contains 1500 signal data, and the ratio of the training,
+validation, and test data sets are divided into 6:2:2 in this work. The data storage format and 
+explain the descriptive data (take the pinhole defect signal with a radius of 3 mm and a depth of 10% as an example). 
+The data set has a total of 48,060,000 signal value data and contains detailed information about defects.
+
+No.	1	2	3	4	5	6	7	8	9	10	11	12	13	14	···
+Data	-1	1	0	0	3	10	0	0	0	-2	0	0	0	0	···
+
+Title: Development of frequency-mixed point-focusing shear horizontal guided wave EMAT for defect inspection using deep neural network
+Author: Hongyu Sun, State Key of Power Systems, Department of Electrical Engineering, Tsinghua University, Beijing, 10084, China.
+Email: sunhy18@mails.tsinghua.edu.cn
+
+If you use our code and database set, please cite our paper [however, not published].
+"""
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras import models, layers, losses, metrics, callbacks, Sequential, optimizers
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+
+def get_data(file_path, shuffle_number=1000, batch_number=100):
+    data_read = pd.read_csv(file_path, header=None)
+    data = data_read.values[:, 10:] # data
+    label = []
+    for i in data_read.values[:, 1:2]: # label
+        for j in i:
+            label.append(j)
+    label = np.array(label)
+    data_db  = tf.data.Dataset.from_tensor_slices(tf.constant(data, dtype=tf.float32))
+    label_db = tf.data.Dataset.from_tensor_slices(tf.constant(label, dtype=tf.int32))
+    data_base = tf.data.Dataset.zip((data_db, label_db)).shuffle(shuffle_number).batch(batch_number)
+    return data_base
+
+def pre_process(x, y):
+    y = tf.cast(y, tf.int32)
+    y_onehot = tf.one_hot(y, 4)
+    return x, y_onehot
+
+
+def main():
+
+    # Please make sure the file path is correct.
+    train_db = get_data(file_path=r'C:\Users\孙洪宇\PycharmProjects\MyProject\UltraDL\Data\CSV_all\train_all.csv').map(pre_process)
+    test_db= get_data(file_path=r'C:\Users\孙洪宇\PycharmProjects\MyProject\UltraDL\Data\CSV_all\validate_all.csv').map(pre_process)
+
+    model = models.Sequential()
+
+    model.add(layers.Dense(1024, activation='relu'))
+    model.add(layers.Dense(4))
+
+    model.compile(optimizer=optimizers.Adam(lr=1e-3), loss=losses.CategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
+    # 50：loss: 0.3817 - accuracy: 0.9014 - val_loss: 0.7181 - val_accuracy: 0.7542
+    # 40：loss: 0.4322 - accuracy: 0.9139 - val_loss: 0.7352 - val_accuracy: 0.6917
+    # 30：loss: 0.6378 - accuracy: 0.7736 - val_loss: 0.8090 - val_accuracy: 0.6042
+    # 20：loss: 0.7791 - accuracy: 0.7583 - val_loss: 0.8988 - val_accuracy: 0.5667
+    # 10：loss: 0.9945 - accuracy: 0.6722 - val_loss: 1.0454 - val_accuracy: 0.5167
+    #ALL：loss: 0.4986 - accuracy: 0.7972 - val_loss: 0.5772 - val_accuracy: 0.7283
+    model.fit(train_db, validation_data=test_db, epochs=10, validation_freq=1)
+
+
+
+if __name__ == '__main__':
+    main()

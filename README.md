@@ -15,7 +15,7 @@ The data set has a total of 48,060,000 signal value data and contains detailed i
 No.	   1	2	3	4	5	6	  7	8 9	10	11	12	13	14	···  
 Data	-1	1	0	0	3	10	0	0 0	-2	 0	 0	 0	 0	···  
 
-Title: Development of frequency-mixed point-focusing shear horizontal guided wave EMAT for defect inspection using deep neural network  
+Title: Development of frequency-mixed point-focusing SH guided wave EMAT for defect inspection using deep neural network  
 Author: Hongyu Sun, State Key of Power Systems, Department of Electrical Engineering, Tsinghua University, Beijing, 10084, China.  
 Email: sunhy18@mails.tsinghua.edu.cn  
 

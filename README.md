@@ -21,7 +21,7 @@ Email: sunhy18@mails.tsinghua.edu.cn
 
 If you use our code and database set, please cite our paper [however, not published].  
 
-NOTICE: Reviewers can obtain the data set password from the end of the paper to run the code.  
+NOTICE: Reviewers can obtain the data set password from the end of the paper's Abstract to run the code.  
 
 Development environment：  
 TensorFlow 2.2  

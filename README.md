@@ -16,7 +16,7 @@ No.	   1	2	3	4	5	6	  7	8 9	10	11	12	13	14	···
 Data	-1	1	0	0	3	10	0	0 0	-2	 0	 0	 0	 0	···  
 
 Title: Development of frequency-mixed point-focusing SH guided wave EMAT for defect inspection using deep neural network  
-Author: Hongyu Sun, State Key of Power Systems, Department of Electrical Engineering, Tsinghua University, Beijing, 10084, China.  
+Author: Hongyu Sun, Songling Huang, State Key of Power Systems, Department of Electrical Engineering, Tsinghua University, Beijing, 10084, China.  
 Email: sunhy18@mails.tsinghua.edu.cn  
 
 If you use our code and database set, please cite our paper [however, not published].  

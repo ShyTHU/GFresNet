@@ -1,0 +1,180 @@
+import numpy as np
+import pandas as pd
+import pywt
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras import models, layers, losses, metrics, callbacks, Sequential, optimizers
+import os
+
+
+gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True) # Allocate video memory on demand
+
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+class BasicBlock(layers.Layer):
+    def __init__(self, filter_num, stride=1):
+        super(BasicBlock, self).__init__()
+
+        self.conv1 = layers.Conv2D(filter_num, kernel_size=3, strides=stride, padding='same')
+        self.bn1 = layers.BatchNormalization()
+        self.ReLU = layers.Activation('relu')
+
+        self.conv2 = layers.Conv2D(filter_num, kernel_size=3, strides=1, padding='same')
+        self.bn2 = layers.BatchNormalization()
+
+        if stride != 1:
+            self.downsample = Sequential()
+            self.downsample.add(layers.Conv2D(filter_num, kernel_size=1, strides=stride, padding='same'))
+        else:
+            self.downsample = lambda x:x
+
+    def call(self, inputs, trainable=None):
+
+        x = self.conv1(inputs)
+        x = self.bn1(x)
+        x = self.ReLU(x)
+
+        x = self.conv2(x)
+        x = self.bn2(x)
+
+        identity = self.downsample(inputs)
+        out = layers.add([x, identity])
+        out = tf.nn.relu(out)
+
+        return out
+
+class ResNet(layers.Layer):
+    def __init__(self, layer_dim, num_classes=4):
+        super(ResNet, self).__init__()
+
+        self.stem = Sequential([
+            layers.Conv2D(32, kernel_size=3, strides=1, padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.MaxPooling2D(pool_size=2, strides=1, padding='same')
+        ])
+
+        self.layer1 = self.build_ResBlock(  32, layer_dim[0], stride=1)
+        self.layer2 = self.build_ResBlock(  64, layer_dim[1], stride=2)
+        self.layer3 = self.build_ResBlock( 128, layer_dim[2], stride=2)
+        self.layer4 = self.build_ResBlock( 256, layer_dim[3], stride=2)
+
+        self.flt = layers.Flatten()
+        self.fc = layers.Dense(num_classes)
+
+    def call(self, inputs, trainable=None):
+
+        x = self.stem(inputs)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.flt(x)
+        x = self.fc(x)
+
+        return x
+
+    def build_ResBlock(self, filter_num, blocks, stride=1):
+
+        resblock = Sequential()
+        resblock.add(BasicBlock(filter_num, stride=stride))
+
+        for _ in range(blocks):
+            resblock.add(BasicBlock(filter_num, stride=1))
+
+        return resblock
+
+def resnet():
+    return ResNet([2, 2, 2, 2])
+
+# CWT for one signal
+def cwt_process(data_original, show=False, number=0):
+    sig = data_original[number]
+    sampling_rate = 8000
+    t = np.arange(0, 400e-6, 400e-6 / sampling_rate)
+    data = sig
+    wavename = 'cgau3'
+    totalscal = 31
+    fc = pywt.central_frequency(wavename)
+    cparam = 2 * fc * totalscal
+    scales = cparam / np.arange(totalscal, 1, -1)
+    [cwtmatr, frequencies] = pywt.cwt(data, scales, wavename, 400e-6 / sampling_rate)
+    print('Data No. %d' %number + ' is converted successfully!')
+    if show is True:
+        plt.contourf(t, frequencies / 2, abs(cwtmatr))
+        plt.show()
+    elif show == 'Three':
+        if number < 3:
+            plt.contourf(t, frequencies / 2, abs(cwtmatr))
+            plt.show()
+    elif show is False:
+        pass
+    return abs(cwtmatr)
+
+def get_data(file_path, shuffle_number=1000, batch_number=30):
+    data_read = pd.read_csv(file_path, header=None)
+    data = data_read.values[:, 10:]
+    data_num = data_read.shape[0]
+    label = []
+    for i in data_read.values[:, 2:3]: # label select
+        for j in i:
+            label.append(j-5)
+    label = np.array(label) # list -> array
+
+    data_after_cwt = []
+    for i in range(data_num):
+        cwted_sig = cwt_process(data_original=data, show='Three', number=i)
+        data_after_cwt.append(cwted_sig)
+
+    data_db  = tf.data.Dataset.from_tensor_slices(tf.constant(data_after_cwt, dtype=tf.float32))
+    label_db = tf.data.Dataset.from_tensor_slices(tf.constant(label, dtype=tf.int32))
+    data_base = tf.data.Dataset.zip((data_db, label_db)).shuffle(shuffle_number).batch(batch_number)
+    return data_base
+
+def pre_process(x, y):
+    x = tf.expand_dims(x, axis=3)
+    y = tf.cast(y, tf.int32)
+    y_onehot = tf.one_hot(y, 4)
+    return x, y_onehot
+
+def main():
+
+    optimizer = optimizers.Adam(1e-4)
+    model = resnet()
+
+    train_db = get_data(file_path=r'C:\Users\孙洪宇\PycharmProjects\MyProject\UltraDL\Data\CSV_corrosion\train_corrosion.csv').map(pre_process)
+    test_db= get_data(file_path=r'C:\Users\孙洪宇\PycharmProjects\MyProject\UltraDL\Data\CSV_corrosion\validate_corrosion.csv').map(pre_process)
+
+    for epoch in range(20):
+        for step, (x, y) in enumerate(train_db):
+            with tf.GradientTape() as tape:
+                out = model(x)
+                loss = tf.losses.categorical_crossentropy(y, out, from_logits=True)
+                loss = tf.reduce_sum(loss)
+            grads = tape.gradient(loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+            if step % 100 ==0:
+                print('loss=', loss.numpy(), end='; ')
+
+
+        total_corr = 0
+        total = 0
+
+        for step, (x, y) in enumerate(test_db):
+            out = model(x)
+            pred = tf.cast(tf.argmax(out, axis=1), tf.int32)
+            y_lable = tf.cast(tf.argmax(y, axis=1), tf.int32)
+            total_corr += tf.reduce_sum(tf.cast(tf.equal(pred, y_lable), tf.int32))
+            total += x.shape[0]
+
+            if step % 100 == 0:
+                print('acc=', (total_corr / total).numpy())
+
+
+if __name__ == '__main__':
+    main()

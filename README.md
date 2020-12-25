@@ -19,7 +19,7 @@ Title: Development of frequency-mixed point-focusing SH guided wave EMAT for def
 Author: Hongyu Sun, Songling Huang, State Key of Power Systems, Department of Electrical Engineering, Tsinghua University, Beijing, 10084, China.  
 Email: sunhy18@mails.tsinghua.edu.cn  
 
-If you use our code and database set, please cite our paper [Hongyu Sun, Lisha Peng, Shen Wang, Songling Huang, Kaifeng Qu, "Development of frequency-mixed pointfocusing shear horizontal guided wave EMAT for defect inspection using deep neural network," IEEE Transactions on Instrumentation and Measurement, 2020, DOI: 10.1109/TIM.2020.3033941].  
+If you use our code and database set, please cite our paper [Hongyu Sun, Lisha Peng, Shen Wang, Songling Huang, Kaifeng Qu, "H. Sun, L. Peng, S. Wang, S. Huang, K. Qu, “Development of Frequency-Mixed Point-Focusing Shear Horizontal Guided-Wave EMAT for Defect Inspection Using Deep Neural Network,” IEEE Transactions on Instrumentation and Measurement, vol. 70, p. 2503014, 2021.].  
 
 NOTICE: Readers can obtain the data set password from the end of the paper's Abstract to run the code.  
 
